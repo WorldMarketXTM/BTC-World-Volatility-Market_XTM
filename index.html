@@ -3,21 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Binance Predict Mirror - BTC 1h</title>
+    <title>Binance Predict Mirror - BTC 1h Pro</title>
+    <!-- Librería Chart.js para la gráfica progresiva -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             background-color: #181a20;
             color: #ffffff;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
+            padding: 10px;
         }
         .card {
             background-color: #1e2329;
-            width: 380px;
+            width: 400px;
             padding: 20px;
             border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.5);
@@ -26,62 +30,77 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
             border-bottom: 1px solid #2b313a;
-            padding-bottom: 10px;
+            padding-bottom: 8px;
         }
         .title { font-weight: bold; font-size: 1.1em; color: #f0b90b; }
         .countdown { font-size: 1.2em; font-weight: bold; color: #f6465d; }
         .price-box {
             display: flex;
             justify-content: space-between;
-            margin: 15px 0;
+            margin: 10px 0;
             background: #12161c;
             padding: 10px;
             border-radius: 8px;
         }
-        .price-label { font-size: 0.85em; color: #848e9c; }
-        .price-val { font-size: 1.1em; font-weight: bold; }
-        .current-price { font-size: 2em; font-weight: bold; margin: 15px 0; text-align: center; }
+        .price-label { font-size: 0.8em; color: #848e9c; }
+        .price-val { font-size: 1.05em; font-weight: bold; }
+        .current-price { font-size: 1.8em; font-weight: bold; margin: 10px 0; text-align: center; }
         .options {
             display: flex;
             gap: 10px;
-            margin-top: 15px;
+            margin-top: 12px;
         }
         .opt-btn {
             flex: 1;
-            padding: 15px;
+            padding: 12px;
             border-radius: 8px;
             text-align: center;
             font-weight: bold;
             border: 2px solid transparent;
+            font-size: 0.9em;
         }
         .up { background-color: rgba(14, 203, 129, 0.1); color: #0ecb81; border-color: #0ecb81; }
         .down { background-color: rgba(246, 70, 93, 0.1); color: #f6465d; border-color: #f6465d; }
+        .predictive-box {
+            margin-top: 12px;
+            background: #12161c;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.85em;
+        }
         .alert-box {
-            margin-top: 15px;
+            margin-top: 12px;
             padding: 10px;
             border-radius: 6px;
             text-align: center;
             font-weight: bold;
+            font-size: 0.9em;
             display: none;
         }
         .alert-active { display: block; background-color: #f0b90b; color: #000; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+        .chart-container {
+            margin-top: 15px;
+            position: relative;
+            height: 140px;
+            width: 100%;
+        }
     </style>
 </head>
 <body>
 
 <div class="card">
     <div class="header">
-        <div class="title">BTC Predict (1h Mirror)</div>
+        <div class="title">BTC Predict Pro</div>
         <div class="countdown" id="timer">--:--</div>
     </div>
 
     <div class="price-box">
         <div>
-            <div class="price-label">Precio Inicial (Hora)</div>
-            <div class="price-val" id="base-price">$0.00</div>
+            <div class="price-label">Precio Inicial (Binance 1h)</div>
+            <div class="price-val" id="base-price">Cargando...</div>
         </div>
         <div style="text-align: right;">
             <div class="price-label">Variación</div>
@@ -97,29 +116,74 @@
         <div class="opt-btn down" id="btn-down">DOWN (-375)</div>
     </div>
 
+    <div class="predictive-box" id="predictive-status">
+        🤖 Algoritmo Predictivo: Analizando velocidad y momentum...
+    </div>
+
     <div class="alert-box" id="alert-box">
         🚨 ¡ALERTA! Umbral de $375 Superado 🚨
+    </div>
+
+    <div class="chart-container">
+        <canvas id="priceChart"></canvas>
     </div>
 </div>
 
 <script>
     let basePrice = null;
-    let currentHour = null;
     const THRESHOLD = 375.0;
+    let priceHistory = [];
+    let timeHistory = [];
 
+    // Inicializar Gráfica con Chart.js
+    const ctx = document.getElementById('priceChart').getContext('2d');
+    const priceChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: timeHistory,
+            datasets: [{
+                data: priceHistory,
+                borderColor: '#f0b90b',
+                borderWidth: 2,
+                pointRadius: 0,
+                tension: 0.2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { display: false },
+                y: { grid: { color: '#2b313a' }, ticks: { color: '#848e9c', font: { size: 10 } } }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+
+    // Obtener precio de apertura exacto de la vela de 1h desde Binance REST API
+    async function fetchExactBasePrice() {
+        try {
+            const response = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=1');
+            const data = await response.json();
+            basePrice = parseFloat(data[0][1]); // Precio Open de la vela actual
+            document.getElementById('base-price').innerText = `$${basePrice.toFixed(2)}`;
+        } catch (e) {
+            console.error("Error obteniendo precio base oficial:", e);
+        }
+    }
+
+    fetchExactBasePrice();
+    // Actualizar precio base cada hora por seguridad
+    setInterval(fetchExactBasePrice, 60000);
+
+    // Conexión WebSocket en tiempo real
     const ws = new WebSocket("wss://stream.binance.com:9443/ws/btcusdt@ticker");
 
     ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
         const price = parseFloat(data.c);
-        const now = new Date();
-        const hour = now.getHours();
-
-        if (basePrice === null || currentHour !== hour) {
-            basePrice = price;
-            currentHour = hour;
-            document.getElementById('base-price').innerText = `$${basePrice.toFixed(2)}`;
-        }
+        
+        if (basePrice === null) return; // Esperar a que cargue la API
 
         const delta = price - basePrice;
         const sign = delta >= 0 ? "+" : "";
@@ -129,6 +193,7 @@
         deltaElem.innerText = `${sign}$${delta.toFixed(2)}`;
         deltaElem.style.color = delta >= 0 ? "#0ecb81" : "#f6465d";
 
+        // Alerta de umbral de $375
         const alertBox = document.getElementById('alert-box');
         if (Math.abs(delta) >= THRESHOLD) {
             alertBox.classList.add('alert-active');
@@ -137,11 +202,51 @@
             alertBox.classList.remove('alert-active');
         }
 
-        const minutesLeft = 59 - now.getMinutes();
-        const secondsLeft = 59 - now.getSeconds();
+        // Algoritmo Predictivo Heurístico (Velocidad y Tendencia)
+        const predBox = document.getElementById('predictive-status');
+        if (priceHistory.length > 5) {
+            const previousPrice = priceHistory[priceHistory.length - 5];
+            const velocity = price - previousPrice; // Cambio en los últimos segundos
+            if (Math.abs(delta) > 250) {
+                predBox.innerHTML = `⚡ <b>Oportunidad Alta:</b> Fuerte impulso hacia ${delta > 0 ? 'UP 📈' : 'DOWN 📉'}`;
+                predBox.style.color = "#0ecb81";
+            } else if (velocity > 15) {
+                predBox.innerHTML = `📈 <b>Momentum Alcista Acelerado</b> (+${velocity.toFixed(1)}$/s)`;
+                predBox.style.color = "#f0b90b";
+            } else if (velocity < -15) {
+                predBox.innerHTML = `📉 <b>Momentum Bajista Acelerado</b> (${velocity.toFixed(1)}$/s)`;
+                predBox.style.color = "#f6465d";
+            } else {
+                predBox.innerHTML = `🛡️ <b>Zona Neutral / Consolidación</b> (Esperando ruptura)`;
+                predBox.style.color = "#848e9c";
+            }
+        }
+
+        // Actualizar datos de la gráfica (últimos 60 puntos)
+        const nowStr = new Date().toLocaleTimeString();
+        if (priceHistory.length > 60) {
+            priceHistory.shift();
+            timeHistory.shift();
+        }
+        priceHistory.push(price);
+        timeHistory.push(nowStr);
+        priceChart.update();
+    };
+
+    // Reloj Regresivo Exacto para el final de la hora
+    function updateTimer() {
+        const now = new Date();
+        const nextHour = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 1, 0, 0);
+        const diffMs = nextHour - now;
+        const totalSecs = Math.floor(diffMs / 1000);
+        const minutesLeft = Math.floor(totalSecs / 60);
+        const secondsLeft = totalSecs % 60;
+        
         document.getElementById('timer').innerText = 
             `${String(minutesLeft).padStart(2, '0')}:${String(secondsLeft).padStart(2, '0')}`;
-    };
+    }
+    setInterval(updateTimer, 1000);
+    updateTimer();
 </script>
 
 </body>
