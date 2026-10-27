@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binance Predict Mirror - BTC 1h</title>
+    <style>
+        body {
+            background-color: #181a20;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .card {
+            background-color: #1e2329;
+            width: 380px;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #2b313a;
+            padding-bottom: 10px;
+        }
+        .title { font-weight: bold; font-size: 1.1em; color: #f0b90b; }
+        .countdown { font-size: 1.2em; font-weight: bold; color: #f6465d; }
+        .price-box {
+            display: flex;
+            justify-content: space-between;
+            margin: 15px 0;
+            background: #12161c;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .price-label { font-size: 0.85em; color: #848e9c; }
+        .price-val { font-size: 1.1em; font-weight: bold; }
+        .current-price { font-size: 2em; font-weight: bold; margin: 15px 0; text-align: center; }
+        .options {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .opt-btn {
+            flex: 1;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            border: 2px solid transparent;
+        }
+        .up { background-color: rgba(14, 203, 129, 0.1); color: #0ecb81; border-color: #0ecb81; }
+        .down { background-color: rgba(246, 70, 93, 0.1); color: #f6465d; border-color: #f6465d; }
+        .alert-box {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+        .alert-active { display: block; background-color: #f0b90b; color: #000; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="header">
+        <div class="title">BTC Predict (1h Mirror)</div>
+        <div class="countdown" id="timer">--:--</div>
+    </div>
+
+    <div class="price-box">
+        <div>
+            <div class="price-label">Precio Inicial (Hora)</div>
+            <div class="price-val" id="base-price">$0.00</div>
+        </div>
+        <div style="text-align: right;">
+            <div class="price-label">Variación</div>
+            <div class="price-val" id="delta-val">$0.00</div>
+        </div>
+    </div>
+
+    <div class="price-label" style="text-align: center;">Precio Actual en Vivo</div>
+    <div class="current-price" id="current-price">$0.00</div>
+
+    <div class="options">
+        <div class="opt-btn up" id="btn-up">UP (+375)</div>
+        <div class="opt-btn down" id="btn-down">DOWN (-375)</div>
+    </div>
+
+    <div class="alert-box" id="alert-box">
+        🚨 ¡ALERTA! Umbral de $375 Superado 🚨
+    </div>
+</div>
+
+<script>
+    let basePrice = null;
+    let currentHour = null;
+    const THRESHOLD = 375.0;
+
+    const ws = new WebSocket("wss://stream.binance.com:9443/ws/btcusdt@ticker");
+
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        const price = parseFloat(data.c);
+        const now = new Date();
+        const hour = now.getHours();
+
+        if (basePrice === null || currentHour !== hour) {
+            basePrice = price;
+            currentHour = hour;
+            document.getElementById('base-price').innerText = `$${basePrice.toFixed(2)}`;
+        }
+
+        const delta = price - basePrice;
+        const sign = delta >= 0 ? "+" : "";
+
+        document.getElementById('current-price').innerText = `$${price.toFixed(2)}`;
+        const deltaElem = document.getElementById('delta-val');
+        deltaElem.innerText = `${sign}$${delta.toFixed(2)}`;
+        deltaElem.style.color = delta >= 0 ? "#0ecb81" : "#f6465d";
+
+        const alertBox = document.getElementById('alert-box');
+        if (Math.abs(delta) >= THRESHOLD) {
+            alertBox.classList.add('alert-active');
+            alertBox.innerText = `🚨 ¡ALERTA! Variación de ${sign}$${delta.toFixed(2)} (Meta $${THRESHOLD})`;
+        } else {
+            alertBox.classList.remove('alert-active');
+        }
+
+        const minutesLeft = 59 - now.getMinutes();
+        const secondsLeft = 59 - now.getSeconds();
+        document.getElementById('timer').innerText = 
+            `${String(minutesLeft).padStart(2, '0')}:${String(secondsLeft).padStart(2, '0')}`;
+    };
+</script>
+
+</body>
+</html>
