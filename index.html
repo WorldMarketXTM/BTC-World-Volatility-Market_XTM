@@ -3,129 +3,222 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Binance Predict Mirror - BTC 1h Pro</title>
-    <!-- Librería Chart.js para la gráfica progresiva -->
+    <title>predict - BTC Up or Down 1h</title>
+    <!-- Librería Chart.js para la gráfica de línea escalonada -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
-            background-color: #181a20;
+            background-color: #12161c;
             color: #ffffff;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            padding: 10px;
+            padding: 15px;
         }
-        .card {
+        .app-card {
             background-color: #1e2329;
-            width: 400px;
+            width: 390px;
             padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
         }
-        .header {
+        .brand-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
-            border-bottom: 1px solid #2b313a;
-            padding-bottom: 8px;
+            margin-bottom: 15px;
         }
-        .title { font-weight: bold; font-size: 1.1em; color: #f0b90b; }
-        .countdown { font-size: 1.2em; font-weight: bold; color: #f6465d; }
-        .price-box {
+        .brand-logo {
+            font-size: 1.6em;
+            font-weight: 800;
+            color: #8c62ff;
+            letter-spacing: -0.5px;
+        }
+        .badge-clasico {
+            background-color: #2b313a;
+            color: #eaeaea;
+            font-size: 0.8em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+        .market-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btc-icon {
+            background: #f0b90b;
+            color: #000;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 0.75em;
+        }
+        .meta-info {
             display: flex;
             justify-content: space-between;
-            margin: 10px 0;
-            background: #12161c;
-            padding: 10px;
+            font-size: 0.8em;
+            color: #848e9c;
+            margin-bottom: 12px;
+        }
+        .prices-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        .price-col-title {
+            font-size: 0.75em;
+            color: #848e9c;
+            margin-bottom: 4px;
+        }
+        .price-col-val {
+            font-size: 0.95em;
+            font-weight: bold;
+            color: #eaeaea;
+        }
+        .countdown-val {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #f6465d;
+        }
+        .chart-box {
+            position: relative;
+            height: 150px;
+            width: 100%;
+            margin-bottom: 15px;
+            background: #181a20;
             border-radius: 8px;
+            padding: 5px;
         }
-        .price-label { font-size: 0.8em; color: #848e9c; }
-        .price-val { font-size: 1.05em; font-weight: bold; }
-        .current-price { font-size: 1.8em; font-weight: bold; margin: 10px 0; text-align: center; }
-        .options {
+        .options-container {
             display: flex;
-            gap: 10px;
-            margin-top: 12px;
+            gap: 12px;
+            margin-bottom: 15px;
         }
+        /* Botones en gris claro / neutro */
         .opt-btn {
             flex: 1;
+            background-color: #2b313a;
+            border: 1px solid #363d4e;
+            border-radius: 12px;
+            padding: 14px 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .opt-btn .btn-text {
+            font-size: 1.1em;
+            font-weight: 800;
+        }
+        .opt-btn .btn-sub {
+            font-size: 0.75em;
+            margin-top: 4px;
+            color: #848e9c;
+        }
+        .up-btn .btn-text { color: #0ecb81; }
+        .down-btn .btn-text { color: #f6465d; }
+
+        /* Efectos de parpadeo intermitente de alerta */
+        @keyframes flash-green {
+            0%, 100% { background-color: #2b313a; box-shadow: none; }
+            50% { background-color: rgba(14, 203, 129, 0.35); border-color: #0ecb81; box-shadow: 0 0 15px #0ecb81; }
+        }
+        @keyframes flash-red {
+            0%, 100% { background-color: #2b313a; box-shadow: none; }
+            50% { background-color: rgba(246, 70, 93, 0.35); border-color: #f6465d; box-shadow: 0 0 15px #f6465d; }
+        }
+        .alert-up-active { animation: flash-green 0.8s infinite; }
+        .alert-down-active { animation: flash-red 0.8s infinite; }
+
+        .predictive-panel {
+            background-color: #181a20;
+            border: 1px solid #2b313a;
+            border-radius: 10px;
             padding: 12px;
-            border-radius: 8px;
-            text-align: center;
+            font-size: 0.82em;
+        }
+        .predictive-header {
+            color: #f0b90b;
             font-weight: bold;
-            border: 2px solid transparent;
-            font-size: 0.9em;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
         }
-        .up { background-color: rgba(14, 203, 129, 0.1); color: #0ecb81; border-color: #0ecb81; }
-        .down { background-color: rgba(246, 70, 93, 0.1); color: #f6465d; border-color: #f6465d; }
-        .predictive-box {
-            margin-top: 12px;
-            background: #12161c;
-            padding: 10px;
-            border-radius: 8px;
-            font-size: 0.85em;
-        }
-        .alert-box {
-            margin-top: 12px;
-            padding: 10px;
-            border-radius: 6px;
-            text-align: center;
-            font-weight: bold;
-            font-size: 0.9em;
-            display: none;
-        }
-        .alert-active { display: block; background-color: #f0b90b; color: #000; animation: pulse 1s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
-        .chart-container {
-            margin-top: 15px;
-            position: relative;
-            height: 140px;
-            width: 100%;
+        .target-price {
+            font-size: 1.1em;
+            font-weight: 800;
+            color: #ffffff;
+            margin-top: 4px;
         }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <div class="header">
-        <div class="title">BTC Predict Pro</div>
-        <div class="countdown" id="timer">--:--</div>
+<div class="app-card">
+    <div class="brand-header">
+        <div class="brand-logo">predict</div>
+        <div class="badge-clasico">Clásico 🚀</div>
     </div>
 
-    <div class="price-box">
+    <div class="market-title">
+        <span class="btc-icon">₿</span> BTC Up or Down 1h
+    </div>
+
+    <div class="meta-info">
+        <span>Vencimiento: <strong id="vencimiento-time">--:--:--</strong></span>
+        <span style="color: #848e9c;">Reglas &gt;</span>
+    </div>
+
+    <div class="prices-grid">
         <div>
-            <div class="price-label">Precio Inicial (Binance 1h)</div>
-            <div class="price-val" id="base-price">Cargando...</div>
+            <div class="price-col-title">Precio inicial</div>
+            <div class="price-col-val" id="base-price">Cargando...</div>
+        </div>
+        <div>
+            <div class="price-col-title">Precio actual</div>
+            <div class="price-col-val" id="current-price">$0.00</div>
+            <div style="font-size: 0.75em;" id="delta-val">-$0.00</div>
         </div>
         <div style="text-align: right;">
-            <div class="price-label">Variación</div>
-            <div class="price-val" id="delta-val">$0.00</div>
+            <div class="price-col-title">Cuenta regresiva</div>
+            <div class="countdown-val" id="timer">--:--</div>
         </div>
     </div>
 
-    <div class="price-label" style="text-align: center;">Precio Actual en Vivo</div>
-    <div class="current-price" id="current-price">$0.00</div>
-
-    <div class="options">
-        <div class="opt-btn up" id="btn-up">UP (+375)</div>
-        <div class="opt-btn down" id="btn-down">DOWN (-375)</div>
-    </div>
-
-    <div class="predictive-box" id="predictive-status">
-        🤖 Algoritmo Predictivo: Analizando velocidad y momentum...
-    </div>
-
-    <div class="alert-box" id="alert-box">
-        🚨 ¡ALERTA! Umbral de $375 Superado 🚨
-    </div>
-
-    <div class="chart-container">
+    <div class="chart-box">
         <canvas id="priceChart"></canvas>
+    </div>
+
+    <div class="options-container">
+        <div class="opt-btn up-btn" id="btn-up">
+            <div class="btn-text">Up 📈</div>
+            <div class="btn-sub">Meta: +$375</div>
+        </div>
+        <div class="opt-btn down-btn" id="btn-down">
+            <div class="btn-text">Down 📉</div>
+            <div class="btn-sub">Meta: -$375</div>
+        </div>
+    </div>
+
+    <div class="predictive-panel">
+        <div class="predictive-header">
+            <span>🤖 Algoritmo Proyectivo</span>
+            <span id="trend-indicator" style="color: #848e9c;">Analizando...</span>
+        </div>
+        <div>Precio estimado al cierre de hora ($ Target):</div>
+        <div class="target-price" id="target-price-val">Calculando...</div>
     </div>
 </div>
 
@@ -135,7 +228,7 @@
     let priceHistory = [];
     let timeHistory = [];
 
-    // Inicializar Gráfica con Chart.js
+    // Inicializar Gráfica de Línea estilo Binance (Naranja Stepped)
     const ctx = document.getElementById('priceChart').getContext('2d');
     const priceChart = new Chart(ctx, {
         type: 'line',
@@ -146,7 +239,8 @@
                 borderColor: '#f0b90b',
                 borderWidth: 2,
                 pointRadius: 0,
-                tension: 0.2
+                stepped: true, // Línea escalonada como la interfaz de Binance
+                tension: 0
             }]
         },
         options: {
@@ -154,7 +248,10 @@
             maintainAspectRatio: false,
             scales: {
                 x: { display: false },
-                y: { grid: { color: '#2b313a' }, ticks: { color: '#848e9c', font: { size: 10 } } }
+                y: { 
+                    grid: { color: '#2b313a' }, 
+                    ticks: { color: '#848e9c', font: { size: 9 } } 
+                }
             },
             plugins: { legend: { display: false } }
         }
@@ -165,66 +262,79 @@
         try {
             const response = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=1');
             const data = await response.json();
-            basePrice = parseFloat(data[0][1]); // Precio Open de la vela actual
-            document.getElementById('base-price').innerText = `$${basePrice.toFixed(2)}`;
+            basePrice = parseFloat(data[0][1]); // Precio Open oficial
+            document.getElementById('base-price').innerText = `$${basePrice.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
         } catch (e) {
-            console.error("Error obteniendo precio base oficial:", e);
+            console.error("Error al obtener precio inicial de Binance:", e);
         }
     }
 
     fetchExactBasePrice();
-    // Actualizar precio base cada hora por seguridad
     setInterval(fetchExactBasePrice, 60000);
 
-    // Conexión WebSocket en tiempo real
+    // WebSocket Binance en tiempo real
     const ws = new WebSocket("wss://stream.binance.com:9443/ws/btcusdt@ticker");
 
     ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
         const price = parseFloat(data.c);
         
-        if (basePrice === null) return; // Esperar a que cargue la API
+        if (basePrice === null) return;
 
         const delta = price - basePrice;
         const sign = delta >= 0 ? "+" : "";
 
-        document.getElementById('current-price').innerText = `$${price.toFixed(2)}`;
+        // Actualizar Precios e Interfaz
+        document.getElementById('current-price').innerText = `$${price.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
         const deltaElem = document.getElementById('delta-val');
         deltaElem.innerText = `${sign}$${delta.toFixed(2)}`;
         deltaElem.style.color = delta >= 0 ? "#0ecb81" : "#f6465d";
 
-        // Alerta de umbral de $375
-        const alertBox = document.getElementById('alert-box');
-        if (Math.abs(delta) >= THRESHOLD) {
-            alertBox.classList.add('alert-active');
-            alertBox.innerText = `🚨 ¡ALERTA! Variación de ${sign}$${delta.toFixed(2)} (Meta $${THRESHOLD})`;
+        // Lógica de Alertas Intermitentes en los Botones Gris Claro
+        const btnUp = document.getElementById('btn-up');
+        const btnDown = document.getElementById('btn-down');
+
+        if (delta >= THRESHOLD) {
+            btnUp.classList.add('alert-up-active');
+            btnDown.classList.remove('alert-down-active');
+        } else if (delta <= -THRESHOLD) {
+            btnDown.classList.add('alert-down-active');
+            btnUp.classList.remove('alert-up-active');
         } else {
-            alertBox.classList.remove('alert-active');
+            btnUp.classList.remove('alert-up-active');
+            btnDown.classList.remove('alert-down-active');
         }
 
-        // Algoritmo Predictivo Heurístico (Velocidad y Tendencia)
-        const predBox = document.getElementById('predictive-status');
+        // Algoritmo Proyectivo - Cálculo del Precio Estimado Target
         if (priceHistory.length > 5) {
-            const previousPrice = priceHistory[priceHistory.length - 5];
-            const velocity = price - previousPrice; // Cambio en los últimos segundos
-            if (Math.abs(delta) > 250) {
-                predBox.innerHTML = `⚡ <b>Oportunidad Alta:</b> Fuerte impulso hacia ${delta > 0 ? 'UP 📈' : 'DOWN 📉'}`;
-                predBox.style.color = "#0ecb81";
-            } else if (velocity > 15) {
-                predBox.innerHTML = `📈 <b>Momentum Alcista Acelerado</b> (+${velocity.toFixed(1)}$/s)`;
-                predBox.style.color = "#f0b90b";
-            } else if (velocity < -15) {
-                predBox.innerHTML = `📉 <b>Momentum Bajista Acelerado</b> (${velocity.toFixed(1)}$/s)`;
-                predBox.style.color = "#f6465d";
+            const prevPrice = priceHistory[priceHistory.length - 5];
+            const velocityPerSec = (price - prevPrice) / 5; // Velocidad por segundo
+            
+            const now = new Date();
+            const remainingSeconds = ((59 - now.getMinutes()) * 60) + (59 - now.getSeconds());
+            
+            // Proyecto del precio estimado considerando momentum amortiguado
+            const estimatedProjectedDelta = velocityPerSec * Math.min(remainingSeconds, 300); 
+            const targetPrice = price + estimatedProjectedDelta;
+
+            document.getElementById('target-price-val').innerText = `$${targetPrice.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+            
+            const trendIndicator = document.getElementById('trend-indicator');
+            if (velocityPerSec > 2) {
+                trendIndicator.innerText = "Impulso Alcista ⚡";
+                trendIndicator.style.color = "#0ecb81";
+            } else if (velocityPerSec < -2) {
+                trendIndicator.innerText = "Impulso Bajista ⚡";
+                trendIndicator.style.color = "#f6465d";
             } else {
-                predBox.innerHTML = `🛡️ <b>Zona Neutral / Consolidación</b> (Esperando ruptura)`;
-                predBox.style.color = "#848e9c";
+                trendIndicator.innerText = "Consolidación ⚖️";
+                trendIndicator.style.color = "#848e9c";
             }
         }
 
-        // Actualizar datos de la gráfica (últimos 60 puntos)
+        // Historial para gráfica
         const nowStr = new Date().toLocaleTimeString();
-        if (priceHistory.length > 60) {
+        if (priceHistory.length > 50) {
             priceHistory.shift();
             timeHistory.shift();
         }
@@ -233,7 +343,7 @@
         priceChart.update();
     };
 
-    // Reloj Regresivo Exacto para el final de la hora
+    // Reloj Regresivo Exacto
     function updateTimer() {
         const now = new Date();
         const nextHour = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 1, 0, 0);
@@ -244,6 +354,10 @@
         
         document.getElementById('timer').innerText = 
             `${String(minutesLeft).padStart(2, '0')}:${String(secondsLeft).padStart(2, '0')}`;
+
+        // Mostrar fecha de vencimiento
+        const formatNextHour = nextHour.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        document.getElementById('vencimiento-time').innerText = formatNextHour;
     }
     setInterval(updateTimer, 1000);
     updateTimer();
